@@ -3,10 +3,13 @@ import psycopg2
 from datetime import date
 import os
 
+# ✅ 可选加载 .env 文件（本地开发时用）
+from dotenv import load_dotenv
+load_dotenv()
+
 app = Flask(__name__)
 
-# ✅ 从环境变量读取数据库连接（Render 推荐方式）
-# ✅ 如果未设置，则使用本地默认连接（便于开发）
+# ✅ 数据库连接地址（Render 使用环境变量）
 DB_URL = os.getenv("DATABASE_URL") or "postgresql://telegram_dice_bot_user:8VDuBQoqcwTXxENfkay0SfQTOJoVfFka@dpg-d197poh5pdvs73e1s1sg-a/telegram_dice_bot"
 
 def get_conn():
@@ -21,7 +24,7 @@ def get_users():
                u.invited_by, u.inviter_rewarded, u.is_blocked,
                i.username
         FROM users u
-        LEFT JOIN users i ON u.invited_by = i.user_id
+        LEFT JOIN users i ON CAST(u.invited_by AS BIGINT) = i.user_id
     """)
     users = c.fetchall()
     conn.close()
@@ -107,7 +110,7 @@ def game_history(user_id):
     offset = (page - 1) * per_page
     return '📄 Game history page is under construction.'
 
-# ✅ Render 兼容设置
+# ✅ Render / 本地 兼容启动设置
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
