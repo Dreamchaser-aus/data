@@ -5,7 +5,7 @@ import os
 
 app = Flask(__name__)
 
-# ✅ 从环境变量读取数据库连接
+# ✅ 从 Render 环境变量读取数据库连接
 DB_URL = os.getenv("postgresql://telegram_dice_bot_user:8VDuBQoqcwTXxENfkay0SfQTOJoVfFka@dpg-d197poh5pdvs73e1s1sg-a/telegram_dice_bot")
 
 def get_conn():
@@ -107,6 +107,7 @@ def game_history(user_id):
     # 可扩展分页历史记录查询
     return '📄 Game history page is under construction.'
 
-# ✅ 本地测试使用，Render 部署用 gunicorn 启动（不用这段）
+# ✅ 启动设置：兼容 Render 的 host 和端口
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
