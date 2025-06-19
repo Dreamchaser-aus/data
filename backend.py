@@ -1,12 +1,18 @@
 from flask import Flask, render_template, request, jsonify
-import sqlite3
+import psycopg2
 from datetime import date
+import os
 
 app = Flask(__name__)
-DB_PATH = "data.db"
+
+# ✅ 从环境变量读取数据库连接
+DB_URL = os.getenv("postgresql://telegram_dice_bot_user:8VDuBQoqcwTXxENfkay0SfQTOJoVfFka@dpg-d197poh5pdvs73e1s1sg-a/telegram_dice_bot")
+
+def get_conn():
+    return psycopg2.connect(DB_URL)
 
 def get_users():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     c = conn.cursor()
     c.execute("""
         SELECT u.user_id, u.first_name, u.last_name, u.username, u.phone,
@@ -21,7 +27,7 @@ def get_users():
     return users
 
 def get_stats():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM users")
     total_users = c.fetchone()[0]
@@ -40,13 +46,13 @@ def get_stats():
     }
 
 def get_rankings():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     c = conn.cursor()
     today = date.today().isoformat()
     c.execute("""
         SELECT username, first_name, points
         FROM users
-        WHERE last_play LIKE ?
+        WHERE last_play LIKE %s
         ORDER BY points DESC
         LIMIT 10
     """, (f"{today}%",))
@@ -75,9 +81,9 @@ def update_user():
     points = request.form.get('points')
     plays = request.form.get('plays')
     is_blocked = request.form.get('is_blocked')
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     c = conn.cursor()
-    c.execute("UPDATE users SET points = ?, plays = ?, is_blocked = ? WHERE user_id = ?",
+    c.execute("UPDATE users SET points = %s, plays = %s, is_blocked = %s WHERE user_id = %s",
               (points, plays, is_blocked, user_id))
     conn.commit()
     conn.close()
@@ -86,9 +92,9 @@ def update_user():
 @app.route('/delete_user', methods=['POST'])
 def delete_user():
     user_id = request.form.get('user_id')
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     c = conn.cursor()
-    c.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+    c.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
     conn.commit()
     conn.close()
     return '', 204
@@ -98,32 +104,9 @@ def game_history(user_id):
     page = int(request.args.get('page', 1))
     per_page = 20
     offset = (page - 1) * per_page
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM game_history WHERE user_id = ?", (user_id,))
-    total_count = c.fetchone()[0]
-    c.execute("""
-        SELECT game_type, result, points_change, timestamp
-        FROM game_history
-        WHERE user_id = ?
-        ORDER BY timestamp DESC
-        LIMIT ? OFFSET ?
-    """, (user_id, per_page, offset))
-    records = c.fetchall()
-    conn.close()
-    return jsonify({
-        "total": total_count,
-        "page": page,
-        "per_page": per_page,
-        "records": [
-            {
-                "game_type": r[0],
-                "result": r[1],
-                "points_change": r[2],
-                "timestamp": r[3]
-            } for r in records
-        ]
-    })
+    # 可扩展分页历史记录查询
+    return '📄 Game history page is under construction.'
 
+# ✅ 本地测试使用，Render 部署用 gunicorn 启动（不用这段）
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
