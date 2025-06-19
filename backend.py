@@ -5,8 +5,9 @@ import os
 
 app = Flask(__name__)
 
-# ✅ 从 Render 环境变量读取数据库连接
-DB_URL = os.getenv("postgresql://telegram_dice_bot_user:8VDuBQoqcwTXxENfkay0SfQTOJoVfFka@dpg-d197poh5pdvs73e1s1sg-a/telegram_dice_bot")
+# ✅ 从环境变量读取数据库连接（Render 推荐方式）
+# ✅ 如果未设置，则使用本地默认连接（便于开发）
+DB_URL = os.getenv("DATABASE_URL") or "postgresql://telegram_dice_bot_user:8VDuBQoqcwTXxENfkay0SfQTOJoVfFka@dpg-d197poh5pdvs73e1s1sg-a/telegram_dice_bot"
 
 def get_conn():
     return psycopg2.connect(DB_URL)
@@ -104,10 +105,9 @@ def game_history(user_id):
     page = int(request.args.get('page', 1))
     per_page = 20
     offset = (page - 1) * per_page
-    # 可扩展分页历史记录查询
     return '📄 Game history page is under construction.'
 
-# ✅ 启动设置：兼容 Render 的 host 和端口
+# ✅ Render 兼容设置
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
